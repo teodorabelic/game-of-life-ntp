@@ -1,86 +1,83 @@
-use std::sync::{Arc, Mutex};
+use crate::seq::Grid;
+use std::sync::Arc;
 use std::thread;
-use crate::io::save_grid;
 
-// 1.grid is separated between 4 threads 
-// 2.Arc (atomically reference counted) - reading threads without copies 
-// 3.Mutex - securing writing into new matrix (every thread in new matrix)
-// 4.Every thread - counts neighbors, applies rules, writing result in Mutex-protected matrix
-// 5.join() waits for every thread
-// 6.result is returned as new generation
-
-pub fn generate_random_grid(rows: usize, cols: usize) -> Vec<Vec<u8>> {
-    let mut grid = vec![vec![0; cols]; rows];
-
-    for r in 0..rows {
-        for c in 0..cols {
-            let value: f32 = rand::random();
-            grid[r][c] = if value > 0.7 { 1 } else { 0 };
-        }
-    }
-
-    grid
-}
-
-pub fn next_generation_parallel(grid: &Vec<Vec<u8>>, num_threads: usize) -> Vec<Vec<u8>> {
+pub fn next_generation_parallel(grid: &Grid, num_threads: usize) -> Grid {
     let rows = grid.len();
     let cols = grid[0].len();
 
-    let grid = Arc::new(grid.clone());
-    let new_grid = Arc::new(Mutex::new(vec![vec![0; cols]; rows]));
+    let threads = num_threads.max(1).min(rows.max(1));
+    let chunk_size = rows.div_ceil(threads);
 
-    let chunk_size = rows / num_threads;
-    let mut handles = vec![];
+    let shared = Arc::new(grid.clone());
 
-    for thread_id in 0..num_threads {
-        let grid_clone = Arc::clone(&grid);
-        let new_grid_clone = Arc::clone(&new_grid);
+    let mut handles: Vec<std::thread::JoinHandle<(usize, Grid)>> =
+        Vec::with_capacity(threads);
 
-        let start_row = thread_id * chunk_size;
-        let end_row = if thread_id == num_threads - 1 {
-            rows
-        } else {
-            start_row + chunk_size
-        };
+    for thread_id in 0..threads {
+        let g = Arc::clone(&shared);
+        let start = thread_id * chunk_size;
+        let end = ((thread_id + 1) * chunk_size).min(rows);
 
-        let handle = thread::spawn(move || {
-            for r in start_row..end_row {
+        if start >= end {
+            continue;
+        }
+
+        handles.push(thread::spawn(move || {
+            let mut chunk = vec![vec![0u8; cols]; end - start];
+
+            for r in start..end {
                 for c in 0..cols {
-                    let neighbors = count_neighbors(&grid_clone, r, c);
+                    let neighbors = count_neighbors(&g, r, c);
 
-                    let new_state = match (grid_clone[r][c], neighbors) {
+                    chunk[r - start][c] = match (g[r][c], neighbors) {
                         (1, x) if x < 2 => 0,
                         (1, 2) | (1, 3) => 1,
                         (1, x) if x > 3 => 0,
                         (0, 3) => 1,
                         (state, _) => state,
                     };
-
-                    let mut locked = new_grid_clone.lock().unwrap();
-                    locked[r][c] = new_state;
                 }
             }
-        });
 
-        handles.push(handle);
+            (start, chunk)
+        }));
     }
+
+    let mut result = vec![vec![0u8; cols]; rows];
 
     for h in handles {
-        h.join().unwrap();
+        let (start, chunk) = h.join().expect("thread panic");
+        for (offset, row) in chunk.into_iter().enumerate() {
+            result[start + offset] = row;
+        }
     }
 
-    Arc::try_unwrap(new_grid).unwrap().into_inner().unwrap()
+    result
 }
 
-fn count_neighbors(grid: &Vec<Vec<u8>>, r: usize, c: usize) -> u8 {
+pub fn run_simulation_parallel(
+    initial: &Grid,
+    iterations: usize,
+    num_threads: usize,
+) -> Grid {
+    let mut grid = initial.clone();
+    for _ in 0..iterations {
+        grid = next_generation_parallel(&grid, num_threads);
+    }
+    grid
+}
+
+fn count_neighbors(grid: &Grid, r: usize, c: usize) -> u8 {
     let rows = grid.len() as isize;
     let cols = grid[0].len() as isize;
-
     let mut count = 0;
 
     for dr in -1..=1 {
         for dc in -1..=1 {
-            if dr == 0 && dc == 0 { continue; }
+            if dr == 0 && dc == 0 {
+                continue;
+            }
 
             let nr = r as isize + dr;
             let nc = c as isize + dc;

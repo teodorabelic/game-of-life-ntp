@@ -1,7 +1,10 @@
-use crate::io::save_grid;
+pub type Grid = Vec<Vec<u8>>;
 
-// initial matrix 
-pub fn generate_random_grid(rows: usize, cols: usize) -> Vec<Vec<u8>> {
+pub fn initialize_grid(rows: usize, cols: usize) -> Grid {
+    generate_random_grid(rows, cols)
+}
+
+pub fn generate_random_grid(rows: usize, cols: usize) -> Grid {
     let mut grid = vec![vec![0; cols]; rows];
 
     for r in 0..rows {
@@ -14,20 +17,16 @@ pub fn generate_random_grid(rows: usize, cols: usize) -> Vec<Vec<u8>> {
     grid
 }
 
-// calculating next generation 
-pub fn next_generation(grid: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+pub fn next_generation(grid: &Grid) -> Grid {
     let rows = grid.len();
     let cols = grid[0].len();
 
-    // new matrix
     let mut new_grid = vec![vec![0; cols]; rows];
 
-    // counting neighbors for every cell
     for r in 0..rows {
         for c in 0..cols {
             let neighbors = count_neighbors(grid, r, c);
 
-            // applying rules of the game
             new_grid[r][c] = match (grid[r][c], neighbors) {
                 (1, x) if x < 2 => 0,
                 (1, 2) | (1, 3) => 1,
@@ -37,20 +36,28 @@ pub fn next_generation(grid: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
             };
         }
     }
-    // returning new matrix
+
     new_grid
 }
 
-// counting neighbors - 8 in total
-fn count_neighbors(grid: &Vec<Vec<u8>>, r: usize, c: usize) -> u8 {
+pub fn run_simulation(initial: &Grid, iterations: usize) -> Grid {
+    let mut grid = initial.clone();
+    for _ in 0..iterations {
+        grid = next_generation(&grid);
+    }
+    grid
+}
+
+fn count_neighbors(grid: &Grid, r: usize, c: usize) -> u8 {
     let rows = grid.len() as isize;
     let cols = grid[0].len() as isize;
-
     let mut count = 0;
 
     for dr in -1..=1 {
         for dc in -1..=1 {
-            if dr == 0 && dc == 0 { continue; }
+            if dr == 0 && dc == 0 {
+                continue;
+            }
 
             let nr = r as isize + dr;
             let nc = c as isize + dc;
