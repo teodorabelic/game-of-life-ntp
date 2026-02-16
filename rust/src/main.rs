@@ -5,6 +5,7 @@ mod seq;
 mod visualize;
 
 use std::time::Instant;
+use std::fs;
 
 fn parse_arg_usize(args: &[String], key: &str, default: usize) -> usize {
     args.windows(2)
@@ -32,23 +33,30 @@ fn main() {
     let iterations = parse_arg_usize(&args, "--iters", 50);
     let threads = parse_arg_usize(&args, "--threads", 4);
     let mode = parse_arg_string(&args, "--mode", "seq");
-    let save_states = !has_flag(&args, "--no-save");
-    let do_visualize = has_flag(&args, "--viz");
-
-    let benchmark = parse_arg_string(&args, "--benchmark", "none");
     let repeats = parse_arg_usize(&args, "--repeats", 5);
 
+    let benchmark = parse_arg_string(&args, "--benchmark", "none");
+
+    let demo = has_flag(&args, "--demo");
+    let full_demo = has_flag(&args, "--full-demo");
+
+    let states_dir = "visualization/states";
+    let frames_dir = "visualization/frames";
+
+    // =========================
+    // BENCHMARK MODES
+    // =========================
     if benchmark == "strong" {
         scaling::run_strong_scaling(rows, cols, iterations, threads, repeats)
             .expect("strong scaling failed");
-        println!("Strong scaling benchmark finished (benchmarks/rust).");
+        println!("Strong scaling benchmark finished.");
         return;
     }
 
     if benchmark == "weak" {
         scaling::run_weak_scaling(rows, cols, iterations, threads, repeats)
             .expect("weak scaling failed");
-        println!("Weak scaling benchmark finished (benchmarks/rust).");
+        println!("Weak scaling benchmark finished.");
         return;
     }
 
@@ -57,45 +65,87 @@ fn main() {
             .expect("strong scaling failed");
         scaling::run_weak_scaling(rows, cols, iterations, threads, repeats)
             .expect("weak scaling failed");
-        println!("Strong + weak scaling benchmarks finished (benchmarks/rust).");
+        println!("Strong + weak scaling finished.");
         return;
     }
 
+    // =========================
+    // DEMO MODES
+    // =========================
+    if demo || full_demo {
+        println!("=== DEMO MODE ===");
+
+        // obriši stare rezultate
+        let _ = fs::remove_dir_all("visualization");
+        let _ = fs::remove_dir_all("benchmarks");
+
+        let demo_repeats = if full_demo { 30 } else { 3 };
+        let demo_rows = if full_demo { rows } else { 200 };
+        let demo_cols = if full_demo { cols } else { 200 };
+        let demo_iters = if full_demo { iterations } else { 50 };
+        let demo_threads = threads.min(8);
+
+        // 1) Simulacija
+        let mut grid = seq::initialize_grid(demo_rows, demo_cols);
+        io::save_grid(&grid, 0, states_dir);
+
+        for step in 1..=demo_iters {
+            grid = parallel::next_generation_parallel(&grid, demo_threads);
+            io::save_grid(&grid, step, states_dir);
+        }
+
+        // 2) Vizualizacija
+        visualize::generate_images(demo_iters)
+            .expect("Visualization failed");
+
+        // 3) Strong scaling
+        scaling::run_strong_scaling(
+            demo_rows,
+            demo_cols,
+            demo_iters,
+            demo_threads,
+            demo_repeats,
+        ).expect("Strong scaling failed");
+
+        // 4) Weak scaling
+        scaling::run_weak_scaling(
+            demo_rows,
+            demo_cols,
+            demo_iters,
+            demo_threads,
+            demo_repeats,
+        ).expect("Weak scaling failed");
+
+        println!("Demo finished.");
+        println!("Check visualization/ and benchmarks/ folders.");
+        return;
+    }
+
+    // =========================
+    // NORMAL RUN MODE
+    // =========================
 
     let mut grid = seq::initialize_grid(rows, cols);
-
-    if save_states {
-        io::save_grid(&grid, 0, "states");
-    }
+    io::save_grid(&grid, 0, states_dir);
 
     let start = Instant::now();
 
     if mode == "par" {
         for step in 1..=iterations {
             grid = parallel::next_generation_parallel(&grid, threads);
-
-            if save_states {
-                io::save_grid(&grid, step, "states");
-            }
+            io::save_grid(&grid, step, states_dir);
         }
     } else {
         for step in 1..=iterations {
             grid = seq::next_generation(&grid);
-
-            if save_states {
-                io::save_grid(&grid, step, "states");
-            }
+            io::save_grid(&grid, step, states_dir);
         }
     }
 
     let elapsed = start.elapsed();
 
-    println!("Mode: {mode}, rows={rows}, cols={cols}, iters={iterations}, threads={threads}");
+    println!(
+        "Mode: {mode}, rows={rows}, cols={cols}, iters={iterations}, threads={threads}"
+    );
     println!("Compute time: {:.6} s", elapsed.as_secs_f64());
-
-    if do_visualize && save_states {
-        visualize::generate_images(iterations).expect("Visualization failed");
-        println!("Visualization frames generated.");
-    }
 }
-

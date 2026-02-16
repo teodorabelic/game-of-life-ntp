@@ -52,8 +52,8 @@ fn calc_stats(samples: &[f64]) -> Stats {
     }
 }
 
-fn measure_seq(rows: usize, cols: usize, iterations: usize) -> f64 {
-    let mut grid = seq::initialize_grid(rows, cols);
+fn measure_seq(base: &seq::Grid, iterations: usize) -> f64 {
+    let mut grid = base.clone();
     let start = Instant::now();
     for _ in 0..iterations {
         grid = seq::next_generation(&grid);
@@ -61,14 +61,15 @@ fn measure_seq(rows: usize, cols: usize, iterations: usize) -> f64 {
     start.elapsed().as_secs_f64()
 }
 
-fn measure_par(rows: usize, cols: usize, iterations: usize, threads: usize) -> f64 {
-    let mut grid = seq::initialize_grid(rows, cols);
+fn measure_par(base: &seq::Grid, iterations: usize, threads: usize) -> f64 {
+    let mut grid = base.clone();
     let start = Instant::now();
     for _ in 0..iterations {
         grid = parallel::next_generation_parallel(&grid, threads);
     }
     start.elapsed().as_secs_f64()
 }
+
 
 fn estimate_parallel_fraction(two_thread_speedup: f64) -> f64 {
     if two_thread_speedup <= 1.0 {
@@ -85,16 +86,18 @@ pub fn run_strong_scaling(
     max_threads: usize,
     repeats: usize,
 ) -> std::io::Result<()> {
-    fs::create_dir_all("benchmarks/rust")?;
+    fs::create_dir_all("benchmarks")?;
     let points = thread_points(max_threads);
     let repeats = repeats.max(1);
 
+    let base = seq::initialize_grid(rows, cols);
+
     let seq_samples: Vec<f64> = (0..repeats)
-        .map(|_| measure_seq(rows, cols, iterations))
+        .map(|_| measure_seq(&base, iterations))
         .collect();
     let seq_stats = calc_stats(&seq_samples);
 
-    let mut csv = File::create("benchmarks/rust/strong_scaling.csv")?;
+    let mut csv = File::create("benchmarks/strong_scaling.csv")?;
     writeln!(
         csv,
         "threads,rows,cols,iters,seq_mean,par_mean,par_stddev,speedup,outliers"
@@ -107,7 +110,7 @@ pub fn run_strong_scaling(
 
     for &t in &points {
         let par_samples: Vec<f64> = (0..repeats)
-            .map(|_| measure_par(rows, cols, iterations, t))
+            .map(|_| measure_par(&base, iterations, t))
             .collect();
         let par_stats = calc_stats(&par_samples);
         let speedup = seq_stats.mean / par_stats.mean;
@@ -138,7 +141,7 @@ pub fn run_strong_scaling(
 
     visualize::draw_scaling_plot(
         "Rust jako skaliranje (Amdahl)",
-        "benchmarks/rust/strong_scaling.png",
+        "benchmarks/strong_scaling.png",
         &measured_speedups,
         &ideal,
         &theory,
@@ -155,11 +158,13 @@ pub fn run_weak_scaling(
     max_threads: usize,
     repeats: usize,
 ) -> std::io::Result<()> {
-    fs::create_dir_all("benchmarks/rust")?;
+    fs::create_dir_all("benchmarks")?;
     let points = thread_points(max_threads);
     let repeats = repeats.max(1);
 
-    let mut csv = File::create("benchmarks/rust/weak_scaling.csv")?;
+    let base = seq::initialize_grid(base_rows, base_cols);
+
+    let mut csv = File::create("benchmarks/weak_scaling.csv")?;
     writeln!(
         csv,
         "threads,rows,cols,iters,seq_mean,par_mean,par_stddev,speedup,outliers"
@@ -175,10 +180,10 @@ pub fn run_weak_scaling(
         let cols = base_cols;
 
         let seq_samples: Vec<f64> = (0..repeats)
-            .map(|_| measure_seq(rows, cols, iterations))
+            .map(|_| measure_seq(&base, iterations))
             .collect();
         let par_samples: Vec<f64> = (0..repeats)
-            .map(|_| measure_par(rows, cols, iterations, t))
+            .map(|_| measure_par(&base, iterations, t))
             .collect();
 
         let seq_stats = calc_stats(&seq_samples);
@@ -211,7 +216,7 @@ pub fn run_weak_scaling(
 
     visualize::draw_scaling_plot(
         "Rust slabo skaliranje (Gustafson)",
-        "benchmarks/rust/weak_scaling.png",
+        "benchmarks/weak_scaling.png",
         &measured_speedups,
         &ideal,
         &theory,

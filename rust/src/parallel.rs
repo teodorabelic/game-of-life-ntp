@@ -55,6 +55,7 @@ pub fn next_generation_parallel(grid: &Grid, num_threads: usize) -> Grid {
     result
 }
 
+/*
 pub fn run_simulation_parallel(initial: &Grid, iterations: usize, num_threads: usize) -> Grid {
     let mut grid = initial.clone();
     for _ in 0..iterations {
@@ -62,6 +63,7 @@ pub fn run_simulation_parallel(initial: &Grid, iterations: usize, num_threads: u
     }
     grid
 }
+ */
 
 fn count_neighbors(grid: &Grid, r: usize, c: usize) -> u8 {
     let rows = grid.len() as isize;

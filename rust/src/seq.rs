@@ -40,6 +40,7 @@ pub fn next_generation(grid: &Grid) -> Grid {
     new_grid
 }
 
+/*
 pub fn run_simulation(initial: &Grid, iterations: usize) -> Grid {
     let mut grid = initial.clone();
     for _ in 0..iterations {
@@ -47,6 +48,7 @@ pub fn run_simulation(initial: &Grid, iterations: usize) -> Grid {
     }
     grid
 }
+ */
 
 fn count_neighbors(grid: &Grid, r: usize, c: usize) -> u8 {
     let rows = grid.len() as isize;

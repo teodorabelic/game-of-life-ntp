@@ -109,12 +109,15 @@ pub fn draw_scaling_plot(
 }
 
 pub fn generate_images(iterations: usize) -> std::io::Result<()> {
-    fs::create_dir_all("frames")?;
+    let states_dir = "visualization/states";
+    let frames_dir = "visualization/frames";
+
+    fs::create_dir_all(frames_dir)?;
 
     for i in 0..=iterations {
-        let state_path = format!("states/state_{i:04}.txt");
+        let state_path = format!("{states_dir}/state_{i:04}.txt");
         if Path::new(&state_path).exists() {
-            draw_from_file(&state_path, i, "frames");
+            draw_from_file(&state_path, i, frames_dir);
         }
     }
 
