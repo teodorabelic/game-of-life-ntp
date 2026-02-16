@@ -1,6 +1,7 @@
-mod seq;
-mod parallel;
 mod io;
+mod parallel;
+mod scaling;
+mod seq;
 mod visualize;
 
 use std::time::Instant;
@@ -34,6 +35,33 @@ fn main() {
     let save_states = !has_flag(&args, "--no-save");
     let do_visualize = has_flag(&args, "--viz");
 
+    let benchmark = parse_arg_string(&args, "--benchmark", "none");
+    let repeats = parse_arg_usize(&args, "--repeats", 5);
+
+    if benchmark == "strong" {
+        scaling::run_strong_scaling(rows, cols, iterations, threads, repeats)
+            .expect("strong scaling failed");
+        println!("Strong scaling benchmark finished (benchmarks/rust).");
+        return;
+    }
+
+    if benchmark == "weak" {
+        scaling::run_weak_scaling(rows, cols, iterations, threads, repeats)
+            .expect("weak scaling failed");
+        println!("Weak scaling benchmark finished (benchmarks/rust).");
+        return;
+    }
+
+    if benchmark == "both" {
+        scaling::run_strong_scaling(rows, cols, iterations, threads, repeats)
+            .expect("strong scaling failed");
+        scaling::run_weak_scaling(rows, cols, iterations, threads, repeats)
+            .expect("weak scaling failed");
+        println!("Strong + weak scaling benchmarks finished (benchmarks/rust).");
+        return;
+    }
+
+
     let mut grid = seq::initialize_grid(rows, cols);
 
     if save_states {
@@ -62,9 +90,7 @@ fn main() {
 
     let elapsed = start.elapsed();
 
-    println!(
-        "Mode: {mode}, rows={rows}, cols={cols}, iters={iterations}, threads={threads}"
-    );
+    println!("Mode: {mode}, rows={rows}, cols={cols}, iters={iterations}, threads={threads}");
     println!("Compute time: {:.6} s", elapsed.as_secs_f64());
 
     if do_visualize && save_states {
@@ -72,3 +98,4 @@ fn main() {
         println!("Visualization frames generated.");
     }
 }
+

@@ -1,8 +1,8 @@
+use crate::io;
 use crate::seq::Grid;
 use plotters::prelude::*;
 use std::fs;
 use std::path::Path;
-use crate::io;
 
 pub fn draw_grid(grid: &Grid, iteration: usize, frames_dir: &str) {
     fs::create_dir_all(frames_dir).expect("failed to create frames dir");
@@ -108,7 +108,16 @@ pub fn draw_scaling_plot(
     root.present().expect("save plot");
 }
 
-pub fn generate_images(_iterations: usize) -> std::io::Result<()> {
+pub fn generate_images(iterations: usize) -> std::io::Result<()> {
+    fs::create_dir_all("frames")?;
+
+    for i in 0..=iterations {
+        let state_path = format!("states/state_{i:04}.txt");
+        if Path::new(&state_path).exists() {
+            draw_from_file(&state_path, i, "frames");
+        }
+    }
+
     Ok(())
 }
 

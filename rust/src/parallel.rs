@@ -11,8 +11,7 @@ pub fn next_generation_parallel(grid: &Grid, num_threads: usize) -> Grid {
 
     let shared = Arc::new(grid.clone());
 
-    let mut handles: Vec<std::thread::JoinHandle<(usize, Grid)>> =
-        Vec::with_capacity(threads);
+    let mut handles: Vec<std::thread::JoinHandle<(usize, Grid)>> = Vec::with_capacity(threads);
 
     for thread_id in 0..threads {
         let g = Arc::clone(&shared);
@@ -56,11 +55,7 @@ pub fn next_generation_parallel(grid: &Grid, num_threads: usize) -> Grid {
     result
 }
 
-pub fn run_simulation_parallel(
-    initial: &Grid,
-    iterations: usize,
-    num_threads: usize,
-) -> Grid {
+pub fn run_simulation_parallel(initial: &Grid, iterations: usize, num_threads: usize) -> Grid {
     let mut grid = initial.clone();
     for _ in 0..iterations {
         grid = next_generation_parallel(&grid, num_threads);
