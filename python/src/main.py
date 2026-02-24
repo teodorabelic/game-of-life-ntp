@@ -5,6 +5,7 @@ import time
 from multiprocessing import Pool, cpu_count
 import matplotlib.pyplot as plt
 import scaling
+import shutil
 
 
 # =====================================
@@ -91,10 +92,8 @@ def next_generation_parallel(grid, workers, pool):
 # I/O
 # =====================================
 def save_grid(grid, iteration, states_dir):
-    os.makedirs(states_dir, exist_ok=True)
     filename = os.path.join(states_dir, f"state_{iteration:04}.txt")
     np.savetxt(filename, grid, fmt="%d")
-
 
 def draw_frame(grid, iteration, frames_dir):
     os.makedirs(frames_dir, exist_ok=True)
@@ -108,9 +107,6 @@ def draw_frame(grid, iteration, frames_dir):
     plt.close()
 
 
-# =====================================
-# MAIN
-# =====================================
 def run(mode, rows, cols, iterations, workers, seed, visualize):
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -119,9 +115,23 @@ def run(mode, rows, cols, iterations, workers, seed, visualize):
     states_dir = os.path.join(outputs_dir, "states")
     frames_dir = os.path.join(outputs_dir, "frames")
 
+    # =====================================
+    # AUTOMATSKO BRISANJE STARIH REZULTATA
+    # =====================================
+    if os.path.exists(states_dir):
+        shutil.rmtree(states_dir)
+
+    if os.path.exists(frames_dir):
+        shutil.rmtree(frames_dir)
+
+    os.makedirs(states_dir)
+    if visualize:
+        os.makedirs(frames_dir)
+
+    # =====================================
+
     grid = initialize_grid(rows, cols, seed)
 
-    # snimi početno stanje
     save_grid(grid, 0, states_dir)
 
     if visualize:
@@ -148,7 +158,6 @@ def run(mode, rows, cols, iterations, workers, seed, visualize):
     print(f"Mode: {mode}")
     print(f"Time: {end - start:.6f} s")
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -161,8 +170,55 @@ if __name__ == "__main__":
     parser.add_argument("--viz", action="store_true")
     parser.add_argument("--benchmark", type=str, default="none")
     parser.add_argument("--repeats", type=int, default=5)
+    parser.add_argument("--demo", action="store_true")
+    parser.add_argument("--full-demo", action="store_true")
 
     args = parser.parse_args()
+
+    # =========================
+    # DEMO MODES
+    # =========================
+    if args.demo or args.full_demo:
+
+        print("=== DEMO MODE ===")
+
+        demo_rows = args.rows if args.full_demo else 200
+        demo_cols = args.cols if args.full_demo else 200
+        demo_iters = args.iters if args.full_demo else 50
+        demo_workers = min(args.workers, 8)
+        demo_repeats = 30 if args.full_demo else 3
+
+        # 1) Pokreni izabrani mode (seq ili par)
+        run(
+            args.mode,  # ← KLJUČNO
+            demo_rows,
+            demo_cols,
+            demo_iters,
+            demo_workers,
+            args.seed,
+            True  # viz uključen u demo
+        )
+
+        # 2) Scaling samo ako je par
+        if args.mode == "par":
+            scaling.run_strong_scaling(
+                demo_rows,
+                demo_cols,
+                demo_iters,
+                demo_workers,
+                demo_repeats
+            )
+
+            scaling.run_weak_scaling(
+                demo_rows,
+                demo_cols,
+                demo_iters,
+                demo_workers,
+                demo_repeats
+            )
+
+        print("Demo finished.")
+        exit()
 
     if args.benchmark == "strong":
         scaling.run_strong_scaling(
