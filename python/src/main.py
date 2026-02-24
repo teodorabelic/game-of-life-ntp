@@ -88,21 +88,60 @@ def next_generation_parallel(grid, workers, pool):
 
 
 # =====================================
+# I/O
+# =====================================
+def save_grid(grid, iteration, states_dir):
+    os.makedirs(states_dir, exist_ok=True)
+    filename = os.path.join(states_dir, f"state_{iteration:04}.txt")
+    np.savetxt(filename, grid, fmt="%d")
+
+
+def draw_frame(grid, iteration, frames_dir):
+    os.makedirs(frames_dir, exist_ok=True)
+
+    plt.figure(figsize=(6, 6))
+    plt.imshow(grid, cmap="binary")
+    plt.axis("off")
+
+    filename = os.path.join(frames_dir, f"frame_{iteration:04}.png")
+    plt.savefig(filename, bbox_inches="tight", pad_inches=0)
+    plt.close()
+
+
+# =====================================
 # MAIN
 # =====================================
 def run(mode, rows, cols, iterations, workers, seed, visualize):
 
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    outputs_dir = os.path.join(base_dir, "visualization")
+
+    states_dir = os.path.join(outputs_dir, "states")
+    frames_dir = os.path.join(outputs_dir, "frames")
+
     grid = initialize_grid(rows, cols, seed)
+
+    # snimi početno stanje
+    save_grid(grid, 0, states_dir)
+
+    if visualize:
+        draw_frame(grid, 0, frames_dir)
 
     start = time.time()
 
     if mode == "par":
         with Pool(processes=workers) as pool:
-            for _ in range(iterations):
+            for step in range(1, iterations + 1):
                 grid = next_generation_parallel(grid, workers, pool)
+                save_grid(grid, step, states_dir)
+                if visualize:
+                    draw_frame(grid, step, frames_dir)
     else:
-        for _ in range(iterations):
+        for step in range(1, iterations + 1):
             grid = next_generation_seq(grid)
+            save_grid(grid, step, states_dir)
+            if visualize:
+                draw_frame(grid, step, frames_dir)
 
     end = time.time()
 
@@ -119,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--iters", type=int, default=100)
     parser.add_argument("--workers", type=int, default=cpu_count())
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--viz", action="store_true")
     parser.add_argument("--benchmark", type=str, default="none")
     parser.add_argument("--repeats", type=int, default=5)
 
@@ -151,5 +191,5 @@ if __name__ == "__main__":
         args.iters,
         args.workers,
         args.seed,
-        False
+        args.viz
     )
