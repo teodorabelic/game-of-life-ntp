@@ -8,18 +8,11 @@ import scaling
 import shutil
 
 
-# =====================================
-# Inicijalizacija
-# =====================================
 def initialize_grid(rows, cols, seed=None):
     if seed is not None:
         np.random.seed(seed)
     return (np.random.rand(rows, cols) > 0.7).astype(np.uint8)
 
-
-# =====================================
-# Sekvencijalna verzija
-# =====================================
 def count_neighbors_seq(grid):
     neighbors = np.zeros_like(grid, dtype=np.uint8)
 
@@ -35,7 +28,6 @@ def count_neighbors_seq(grid):
 
     return neighbors
 
-
 def next_generation_seq(grid):
     neighbors = count_neighbors_seq(grid)
 
@@ -45,9 +37,6 @@ def next_generation_seq(grid):
     ).astype(np.uint8)
 
 
-# =====================================
-# Paralelna verzija
-# =====================================
 def process_block(args):
     block, start_row, end_row = args
 
@@ -59,7 +48,6 @@ def process_block(args):
     ).astype(np.uint8)
 
     return new_block, start_row, end_row
-
 
 def next_generation_parallel(grid, workers, pool):
     rows = grid.shape[0]
@@ -87,10 +75,6 @@ def next_generation_parallel(grid, workers, pool):
 
     return new_grid
 
-
-# =====================================
-# I/O
-# =====================================
 def save_grid(grid, iteration, states_dir):
     filename = os.path.join(states_dir, f"state_{iteration:04}.txt")
     np.savetxt(filename, grid, fmt="%d")
@@ -115,9 +99,7 @@ def run(mode, rows, cols, iterations, workers, seed, visualize):
     states_dir = os.path.join(outputs_dir, "states")
     frames_dir = os.path.join(outputs_dir, "frames")
 
-    # =====================================
-    # AUTOMATSKO BRISANJE STARIH REZULTATA
-    # =====================================
+    # automatsko brisanje starih rezultata
     if os.path.exists(states_dir):
         shutil.rmtree(states_dir)
 
@@ -128,7 +110,6 @@ def run(mode, rows, cols, iterations, workers, seed, visualize):
     if visualize:
         os.makedirs(frames_dir)
 
-    # =====================================
 
     grid = initialize_grid(rows, cols, seed)
 
@@ -175,9 +156,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # =========================
-    # DEMO MODES
-    # =========================
+    # demo
     if args.demo or args.full_demo:
 
         print("=== DEMO MODE ===")
@@ -188,18 +167,16 @@ if __name__ == "__main__":
         demo_workers = min(args.workers, 8)
         demo_repeats = 30 if args.full_demo else 3
 
-        # 1) Pokreni izabrani mode (seq ili par)
         run(
-            args.mode,  # ← KLJUČNO
+            args.mode,
             demo_rows,
             demo_cols,
             demo_iters,
             demo_workers,
             args.seed,
-            True  # viz uključen u demo
+            True
         )
 
-        # 2) Scaling samo ako je par
         if args.mode == "par":
             scaling.run_strong_scaling(
                 demo_rows,

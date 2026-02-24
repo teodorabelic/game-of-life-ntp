@@ -1,0 +1,65 @@
+ODBRANA
+
+RUST ----------------------------------------------------------------
+Sekvencijalno: 
+Sistem modelujem kao dvodimenzionalnu matricu tipa Vec<Vec<u8>>. Svaka iteracija generiše novu matricu na osnovu prethodne generacije. Za svaku ćeliju brojim susede i primenjujem Conway-ova pravila koristeći match izraz. Implementacija je sekvencijalna i ima složenost O(iterations × rows × cols).
+
+Paralelno:
+Paralelizacija se vrši deljenjem matrice po redovima. Svaka nit dobija svoj opseg redova i računa novu generaciju samo za taj deo. Originalna matrica se deli između niti korišćenjem Arc reference, ali se ne modifikuje. Svaka nit generiše lokalni rezultat, a nakon join faze rezultati se spajaju u finalnu matricu. Time se izbegavaju race condition-i i potreba za sinhronizacijom.
+
+PYTHON --------------------------------------------------------------
+Sekvencijalno:
+Sekvencijalna Python verzija implementirana je vektorizovano pomoću NumPy biblioteke. Broj suseda se računa pomoću slicing operacija bez np.roll funkcije, čime se izbegavaju dodatne kopije matrice. Pravila igre primenjuju se pomoću logičkih maski nad celom matricom. Implementacija je iterativna i čuva stanje sistema po generacijama.
+
+Paralelno:
+Paralelizacija u Python-u realizovana je pomoću multiprocessing biblioteke. Matrica se deli po redovima, pri čemu svaki proces obrađuje svoj blok. Koristim persistent Pool kako bih izbegla overhead ponovnog kreiranja procesa. Međutim, performanse su ograničene zbog serijalizacije i kopiranja podataka između procesa, naročito na Windows platformi.
+
+SKALIRANJA ---------------python:
+
+Na Windows operativnom sistemu multiprocessing koristi spawn mehanizam, što uvodi dodatni overhead pri kreiranju procesa.
+
+sekvencijalno:
+python src/main.py --mode seq --rows 2000 --cols 2000 --iters 200
+python src/main.py --mode seq --demo
+
+paralelno:
+python src/main.py --mode par --rows 2000 --cols 2000 --iters 200 --workers 8
+python src/main.py --mode par --workers 8 --demo
+
+strong scaling:
+python src/main.py --benchmark strong --rows 2000 --cols 2000 --iters 200 --workers 8 --repeats 30
+python src/main.py --benchmark strong --rows 1000 --cols 1000 --iters 100 --workers 8 --repeats 5
+
+weak scaling:
+python src/main.py --benchmark weak --rows 500 --cols 2000 --iters 200 --workers 8 --repeats 30
+python src/main.py --benchmark weak --rows 300 --cols 1000 --iters 100 --workers 8 --repeats 5
+
+demo:
+python src/main.py --full-demo --rows 2000 --cols 2000 --iters 200 --workers 8
+python src/main.py --demo
+
+
+
+rust:
+
+Rust implementacija je kompajlirana u release režimu radi dobijanja realnih performansi. Debug režim značajno utiče na rezultate merenja.
+
+sekvencijalno:
+cargo run --release -- --mode seq --rows 2000 --cols 2000 --iters 200
+cargo run --release -- --mode seq --rows 800 --cols 800 --iters 50
+
+paralelno:
+cargo run --release -- --mode par --rows 2000 --cols 2000 --iters 200 --threads 8
+cargo run --release -- --mode par --rows 800 --cols 800 --iters 50 --threads 8
+
+strong scaling:
+cargo run --release -- --benchmark strong --rows 1000 --cols 1000 --iters 200 --threads 8 --repeats 30
+cargo run --release -- --benchmark strong --rows 800 --cols 800 --iters 100 --threads 8 --repeats 5
+
+weak scaling:
+cargo run --release -- --benchmark weak --rows 250 --cols 1000 --iters 200 --threads 8 --repeats 30
+cargo run --release -- --benchmark weak --rows 200 --cols 800 --iters 100 --threads 8 --repeats 5
+
+vizualizacija:
+cargo run --release -- --demo-------------------------------------------
+Kod jakog skaliranja veličina problema je konstantna, a broj procesa raste. Merim ubrzanje kao odnos sekvencijalnog i paralelnog vremena. Kod slabog skaliranja povećavam veličinu problema proporcionalno broju procesa kako bih održala konstantan posao po jezgru. Rezultate upoređujem sa idealnim skaliranjem.

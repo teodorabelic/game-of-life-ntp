@@ -33,9 +33,6 @@ def measure_par(grid, iterations, workers):
     return time.time() - start
 
 
-# =====================================
-# Strong Scaling
-# =====================================
 def run_strong_scaling(rows, cols, iterations, max_workers, repeats):
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -78,9 +75,6 @@ def run_strong_scaling(rows, cols, iterations, max_workers, repeats):
     )
 
 
-# =====================================
-# Weak Scaling
-# =====================================
 def run_weak_scaling(base_rows, cols, iterations, max_workers, repeats):
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

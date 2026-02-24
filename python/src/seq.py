@@ -2,22 +2,20 @@ import numpy as np
 import os
 import time
 
-
-# =========================
-# Inicijalizacija
-# =========================
+# NumPy
 def initialize_grid(rows, cols, seed=None):
     if seed is not None:
-        np.random.seed(seed)
+        np.random.seed(seed)    # random 1/0
+    # priblizno 30% zivih celija
+    # pretvara True/False u 0/1
     return (np.random.rand(rows, cols) > 0.7).astype(np.uint8)
 
-
-# =========================
-# Brzi neighbors (bez roll)
-# =========================
+# ne koristim np.roll jer on pravi kopije matrice
 def count_neighbors(grid):
+    # prazna matrica za broj suseda
     neighbors = np.zeros_like(grid, dtype=np.uint8)
 
+    # 8 suseda
     neighbors[:-1, :] += grid[1:, :]
     neighbors[1:, :] += grid[:-1, :]
     neighbors[:, :-1] += grid[:, 1:]
@@ -30,31 +28,23 @@ def count_neighbors(grid):
 
     return neighbors
 
-
-# =========================
-# Jedna iteracija
-# =========================
 def next_generation(grid):
     neighbors = count_neighbors(grid)
 
+    # pravila (vektorizovana)
+    # NumPy koristi C backend, pa se Python interpreter minimalno koristi; mnogo brze od klasicne petlje
     return (
         ((grid == 1) & ((neighbors == 2) | (neighbors == 3))) |
         ((grid == 0) & (neighbors == 3))
     ).astype(np.uint8)
 
-
-# =========================
-# Zapis
-# =========================
+# cuva stanja u datoteku states
 def save_grid(grid, iteration, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     filename = os.path.join(output_dir, f"state_{iteration:04}.txt")
     np.savetxt(filename, grid, fmt="%d")
 
-
-# =========================
-# Simulacija
-# =========================
+# svaka iteracija koristi prethodno stanje, generise novo i snima rezultat
 def run_simulation(rows, cols, iterations, output_dir, seed=None):
     grid = initialize_grid(rows, cols, seed)
 
