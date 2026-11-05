@@ -142,4 +142,4 @@ Additional execution commands and benchmarking configurations are available in [
 
 ## 7. Experimental Analysis
 
-Detailed benchmark results, performance graphs, scaling analysis, and conclusions are available in the [Experimental Analysis Report](Izve%C5%A1taj%20o%20eksperimentima%20jakog%20i%20slabog%20skaliranja.docx).
+Detailed benchmark results, performance graphs, scaling analysis, and conclusions are available in the [Experimental Analysis Report](Izve%C5%A1taj%20o%20eksperimentima%20jakog%20i%20slabog%20skaliranja.pdf).
