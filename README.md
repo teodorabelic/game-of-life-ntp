@@ -1,108 +1,145 @@
-# Napredne tehnike programiranja
-# Celularni automati – Game of Life  
-**HPC projektni zadatak (Python + Rust)**
+# Conway's Game of Life – Python & Rust
 
-## 1. Opis problema
-Celularni automati predstavljaju modele u kojima se prostor prikazuje kao diskretna mreža ćelija. Svaka ćelija ima stanje (aktivna ili neaktivna), a stanje se menja u diskretnim vremenskim koracima na osnovu unapred definisanih pravila.
+**High-Performance Computing (HPC) Project**
 
-U ovom projektu implementira se **Conway's Game of Life**, jedan od najpoznatijih i najistraženijih sistema celularnih automata. Pravila evolucije su:
-1. Živa ćelija sa manje od 2 živa suseda → **umire** (usamljenost)  
-2. Živa ćelija sa 2 ili 3 živa suseda → **preživljava**  
-3. Živa ćelija sa više od 3 živa suseda → **umire** (prenaseljenost)  
-4. Mrtva ćelija sa tačno 3 živa suseda → **postaje živa** (reprodukcija)
+A project developed for the Advanced Programming Techniques course at the Faculty of Technical Sciences, University of Novi Sad.
 
-Cilj projekta je implementirati:
-- sekvencijalnu i paralelizovanu verziju simulacije u **Python-u** i **Rust-u**
-- eksperimente **jakog i slabog skaliranja**
-- vizualizaciju evolucije sistema po iteracijama (Rust)
+## 1. Problem Description
 
-Projektni zadatak spada u kategoriju **predefinisanih HPC tema**.
+Cellular automata are computational models in which space is represented as a discrete grid of cells. Each cell has a state (alive or dead), which changes in discrete time steps according to predefined rules.
 
+This project implements **Conway's Game of Life**, a well-known cellular automaton based on four rules:
 
-## 2. Plan implementacije
-### 2.1 Python implementacija (25 poena)
-#### Sekvencijalna verzija
-- Reprezentacija mreže kao 2D matrice (`numpy` ili standardne liste)
-- Izračunavanje sledećeg stanja na osnovu suseda
-- Upis stanja po iteracijama u datoteke
-#### Paralelizovana verzija (multiprocessing)
-- Podela matrice po redovima ili blokovima
-- Svaki proces računa svoju sekciju matrice
-- Sinhronizacija ivica (halo exchange)
-- Spajanje delova u finalnu matricu po iteraciji
+1. A live cell with fewer than 2 live neighbors **dies** (underpopulation).
+2. A live cell with 2 or 3 live neighbors **survives**.
+3. A live cell with more than 3 live neighbors **dies** (overpopulation).
+4. A dead cell with exactly 3 live neighbors **becomes alive** (reproduction).
 
-### 2.2 Rust implementacija (26 poena)
-#### Sekvencijalna verzija
-- Efikasan prikaz matrice pomoću `Vec<Vec<u8>>`
-- Double-buffer pristup (current → next)
-- Upis rezultata po iteraciji
-#### Paralelizovana verzija (threads)
-- Ručna podela matrice na segmente
-- Korišćenje:
-  - `std::thread`
-  - `Arc`
-  - `Mutex` ili `RwLock`
-- Sinhronizacija rubnih redova
-- Optimizovana raspodela posla po jezgrima procesora
+The project includes:
 
-## 3. Eksperimenti skaliranja
-### 3.1 Jako skaliranje (strong scaling)
-- Fiksna veličina problema (npr. 2000×2000)
-- Variranje broja niti/procesa
-- Poređenje:
-  - sekvencijalna Python vs. paralelna Python
-  - sekvencijalni Rust vs. paralelni Rust
-Biće generisano:
-- grafik jakog skaliranja (Python + Amdal)
-- grafik jakog skaliranja (Rust + Amdal)
-### 3.2 Slabo skaliranje (weak scaling)
-- Povećanje matrice proporcionalno broju jezgara
-- Posao po jezgri ostaje konstantan
-- Poređenje rezultata sa Gustafsonovim zakonom
-Biće generisano:
-- grafik slabog skaliranja (Python)
-- grafik slabog skaliranja (Rust)
-Sve kombinacije parametara izvodiće se **30 puta** radi statističke tačnosti  
-(srednja vrednost, standardna devijacija, identifikacija outliera).
+- Sequential and parallel implementations in **Python** and **Rust**.
+- **Strong and weak scaling** experiments.
+- Visualization of the simulation's evolution across iterations.
 
-## 4. Vizualizacija (10 poena)
-Vizualizacija će prikazivati stanje Game of Life mreže po iteracijama.
+## 2. Implementation
 
-Planirana Rust biblioteka:
-- **Plotters** (`plotters` ili `plotters-svg`)
+### 2.1 Python Implementation
 
-Podržani prikazi:
-- žive i mrtve ćelije (2D prikaz)
-- evolucija kroz vreme
-- vizualizacija poznatih obrazaca:
-  - glider
-  - oscillator
-  - still life
-  - spaceship
+**Sequential version**
+- Represents the grid as a two-dimensional matrix.
+- Calculates the next generation based on neighboring cells.
+- Processes the simulation iteratively.
 
-## 5. Arhitektura i tehnologije
-### Rust:
-- `std::thread`
-- `Arc`, `Mutex` / `RwLock`
-- `plotters` (vizualizacija)
-- opcioni `rayon` (samo ako asistent odobri)
-### Python:
-- `multiprocessing`
-- `numpy` (opciono)
+**Parallel version (multiprocessing)**
+- Divides the grid into sections assigned to worker processes.
+- Computes sections concurrently.
+- Combines the computed sections to produce the next generation.
 
-### Struktura repozitorijuma
-```txt
-/python
-    seq_game_of_life.py
-    parallel_game_of_life.py
-    /outputs
+### 2.2 Rust Implementation
 
-/rust
-    src/seq.rs
-    src/parallel.rs
-    /outputs
+**Sequential version**
+- Represents the grid using Rust data structures.
+- Computes successive generations using separate current and next states.
 
-/visualization
-    rust_visualizer.rs
+**Parallel version (multithreading)**
+- Divides the grid into row-based segments.
+- Uses `std::thread` and `Arc` for parallel computation.
+- Combines computed segments after each generation.
 
-README.md
+## 3. Scaling Experiments
+
+### 3.1 Strong Scaling
+
+Strong scaling measures how execution time changes as the number of workers increases while the problem size remains fixed.
+
+The experiments compare sequential and parallel implementations in both Python and Rust, evaluating execution time and speedup.
+
+### 3.2 Weak Scaling
+
+Weak scaling evaluates performance as the problem size increases proportionally to the number of workers.
+
+The experiments examine scalability and parallel efficiency using different grid sizes and worker counts.
+
+Repeated measurements were used to analyze execution times and performance variations.
+
+## 4. Visualization
+
+The project includes visualization of the Game of Life simulation using Rust and the **Plotters** library.
+
+The visualization illustrates the evolution of live and dead cells across successive generations.
+
+## 5. Architecture and Technologies
+
+| Component | Technology |
+|---|---|
+| Programming Languages | Python, Rust |
+| Python Parallelism | multiprocessing |
+| Rust Parallelism | std::thread, Arc |
+| Visualization | Plotters |
+| Performance Analysis | Strong Scaling, Weak Scaling, Amdahl's Law |
+
+### Repository Structure
+
+```text
+game-of-life-ntp/
+├── python/
+│   ├── src/
+│   │   ├── main.py
+│   │   ├── seq.py
+│   │   ├── parallel.py
+│   │   └── scaling.py
+│   └── benchmarks/
+│
+├── rust/
+│   ├── src/
+│   │   ├── main.rs
+│   │   ├── seq.rs
+│   │   ├── parallel.rs
+│   │   ├── scaling.rs
+│   │   ├── visualize.rs
+│   │   └── io.rs
+│   └── Cargo.toml
+│
+├── pokretanje.txt
+└── README.md
+```
+
+## 6. Running the Project
+
+### Python
+
+Navigate to the `python` directory.
+
+**Sequential execution:**
+
+```bash
+python src/main.py --mode seq --rows 2000 --cols 2000 --iters 200
+```
+
+**Parallel execution:**
+
+```bash
+python src/main.py --mode par --rows 2000 --cols 2000 --iters 200 --workers 8
+```
+
+### Rust
+
+Navigate to the `rust` directory.
+
+**Sequential execution:**
+
+```bash
+cargo run --release -- --mode seq --rows 2000 --cols 2000 --iters 200
+```
+
+**Parallel execution:**
+
+```bash
+cargo run --release -- --mode par --rows 2000 --cols 2000 --iters 200 --threads 8
+```
+
+Additional execution commands and benchmarking configurations are available in [`pokretanje.txt`](pokretanje.txt).
+
+## 7. Experimental Analysis
+
+Detailed benchmark results, performance graphs, scaling analysis, and conclusions are available in the [Experimental Analysis Report](Izve%C5%A1taj%20o%20eksperimentima%20jakog%20i%20slabog%20skaliranja.docx).
